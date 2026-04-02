@@ -14,7 +14,7 @@ Toolbelt pessoal de scripts de terminal — instalável via `curl` e extensível
 ## Instalação
 
 ```bash
-curl -s "https://raw.githubusercontent.com/selvs-dev/bsd/main/install.sh" | bash
+curl -s "https://raw.githubusercontent.com/selvs-dev/bsd/main/setup/install.sh" | bash
 ```
 
 O instalador irá:
@@ -66,4 +66,16 @@ Para atualizar para a versão mais recente:
 
 ```bash
 git -C ~/.bsd pull
+```
+
+## Desinstalação
+
+```bash
+curl -s "https://raw.githubusercontent.com/selvs-dev/bsd/main/setup/uninstall.sh" | bash
+```
+
+Ou, se o `bsd` já estiver no PATH:
+
+```bash
+bsd --uninstall
 ```

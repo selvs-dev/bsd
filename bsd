@@ -39,8 +39,9 @@ show_help() {
     echo -e "  bsd [COMMAND] [ARGS...]"
     echo
     echo -e "\e[1mCOMMANDS:\e[0m"
-    echo -e "  \e[36m--install\e[0m    Adiciona o diretório do projeto ao PATH no .bashrc / .zshrc"
-    echo -e "  \e[36m--help\e[0m       Exibe esta mensagem de ajuda"
+    echo -e "  \e[36m--install\e[0m      Adiciona o diretório do projeto ao PATH no .bashrc / .zshrc"
+    echo -e "  \e[36m--uninstall\e[0m    Remove o bsd do PATH e apaga ~/.bsd"
+    echo -e "  \e[36m--help\e[0m         Exibe esta mensagem de ajuda"
 
     # Scripts dinâmicos em BSD_ROOT/scripts/
     local scripts_dir="$BSD_ROOT/scripts"
@@ -84,6 +85,33 @@ do_install() {
     fi
 }
 
+do_uninstall() {
+    local removed=0
+
+    for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+        if [[ -f "$rc" ]] && grep -qF 'bsd' "$rc"; then
+            # Remove linhas do bloco adicionado pelo --install
+            sed -i '/# bsd - adicionado por --install/d' "$rc"
+            sed -i '/export PATH=.*\.bsd/d' "$rc"
+            sed -i '/export PATH=.*bsd/d' "$rc"
+            echo -e "\e[32m[ok]\e[0m     Entradas removidas de $rc"
+            removed=1
+        fi
+    done
+
+    if [[ -d "$HOME/.bsd" ]]; then
+        rm -rf "$HOME/.bsd"
+        echo -e "\e[32m[ok]\e[0m     Diretório ~/.bsd removido"
+        removed=1
+    fi
+
+    if [[ $removed -eq 1 ]]; then
+        echo -e "\e[1m\nReabra o terminal para aplicar as alterações.\e[0m"
+    else
+        echo -e "\e[33m[aviso]\e[0m  Nada a remover."
+    fi
+}
+
 run_script() {
     local name="$1"
     shift
@@ -104,6 +132,9 @@ case "${1:-}" in
         ;;
     --install)
         do_install
+        ;;
+    --uninstall)
+        do_uninstall
         ;;
     -*)
         echo -e "\e[31mComando desconhecido:\e[0m $1"
