@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# Diretório raiz do projeto (sempre o diretório real do script, independente de onde é chamado)
+BSD_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Rainbow gradient colors (red → orange → yellow → green → cyan → blue → magenta)
+colors=(196 202 208 214 220 226 190 154 118 82 46 47 48 49 50 51 45 39 33 27 21 57 93 129 165 201)
+nc=${#colors[@]}
+
+print_gradient_line() {
+    local line="$1"
+    local len=${#line}
+    local total=80
+
+    for (( i=0; i<len; i++ )); do
+        local char="${line:$i:1}"
+        local idx=$(( i * nc / total ))
+        (( idx >= nc )) && idx=$(( nc - 1 ))
+        printf "\e[38;5;%dm%s" "${colors[$idx]}" "$char"
+    done
+    printf "\e[0m\n"
+}
+
+show_banner() {
+    echo
+    print_gradient_line '  |            __|        |               _ \             |              '
+    sleep 0.08
+    print_gradient_line '   _ \  |  | \__ \   -_)  | \ \ / (_-<    |  |  _ \   _|   _|   _ \   _|  '
+    sleep 0.08
+    print_gradient_line ' _.__/ \_, | ____/ \___| _|  \_/  ___/   ___/ \___/ \__| \__| \___/ _|   '
+    sleep 0.08
+    print_gradient_line '       ___/ byselvs.dev/doctor - version 0.1.0'
+    echo
+}
+
+show_help() {
+    show_banner
+    echo -e "\e[1mUSAGE:\e[0m"
+    echo -e "  bsd [COMMAND] [ARGS...]"
+    echo
+    echo -e "\e[1mCOMMANDS:\e[0m"
+    echo -e "  \e[36m--install\e[0m    Adiciona o diretório do projeto ao PATH no .bashrc / .zshrc"
+    echo -e "  \e[36m--help\e[0m       Exibe esta mensagem de ajuda"
+
+    # Scripts dinâmicos em BSD_ROOT/scripts/
+    local scripts_dir="$BSD_ROOT/scripts"
+    if [[ -d "$scripts_dir" ]]; then
+        local found=0
+        for script in "$scripts_dir"/*.sh; do
+            [[ -f "$script" ]] || continue
+            local name
+            name="$(basename "$script" .sh)"
+            if [[ $found -eq 0 ]]; then
+                echo
+                echo -e "\e[1mSCRIPTS:\e[0m"
+                found=1
+            fi
+            echo -e "  \e[32m$name\e[0m"
+        done
+    fi
+    echo
+}
+
+do_install() {
+    local export_line="export PATH=\"\$PATH:$BSD_ROOT\""
+    local installed=0
+
+    for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+        if [[ -f "$rc" ]]; then
+            if grep -qF "$BSD_ROOT" "$rc"; then
+                echo -e "\e[33m[aviso]\e[0m  $rc já contém o caminho, pulando."
+            else
+                echo "" >> "$rc"
+                echo "# bsd - adicionado por --install" >> "$rc"
+                echo "$export_line" >> "$rc"
+                echo -e "\e[32m[ok]\e[0m     Adicionado em $rc"
+                installed=1
+            fi
+        fi
+    done
+
+    if [[ $installed -eq 1 ]]; then
+        echo -e "\e[1m\nReabra o terminal ou execute \`source ~/.bashrc\` (ou .zshrc) para aplicar.\e[0m"
+    fi
+}
+
+run_script() {
+    local name="$1"
+    shift
+    local script="$BSD_ROOT/scripts/$name.sh"
+    if [[ -f "$script" ]]; then
+        show_banner
+        bash "$script" "$@"
+    else
+        echo -e "\e[31mScript não encontrado:\e[0m $name"
+        show_help
+        exit 1
+    fi
+}
+
+case "${1:-}" in
+    --help|-h|"")
+        show_help
+        ;;
+    --install)
+        do_install
+        ;;
+    -*)
+        echo -e "\e[31mComando desconhecido:\e[0m $1"
+        show_help
+        exit 1
+        ;;
+    *)
+        run_script "$@"
+        ;;
+esac
