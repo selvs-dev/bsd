@@ -3,13 +3,34 @@ set -euo pipefail
 
 USER_RDP="MicrosoftAccount\\selvino.junior@hotmail.com"
 PASS_RDP="admin"
-HOST_RDP="192.168.100.158:3389"
+HOST_RDP="192.168.100.194:3389"
 
-ARG="${1:-}"
+USE_RDESKTOP=false
+PAIR=""
 
-if [[ "$ARG" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
-  PAIR="$ARG"
-else
+for arg in "$@"; do
+  if [[ "$arg" == "--rd" ]]; then
+    USE_RDESKTOP=true
+  elif [[ "$arg" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
+    PAIR="$arg"
+  fi
+done
+
+if $USE_RDESKTOP; then
+  nohup rdesktop \
+    -u "selvino.junior@hotmail.com" \
+    -p "$PASS_RDP" \
+    -d "MicrosoftAccount" \
+    -r sound:local:alsa \
+    -r clipboard:PRIMARYCLIPBOARD \
+    -k pt \
+    "$HOST_RDP" \
+    </dev/null >/tmp/rdp_0.log 2>&1 &
+  echo "RDP (rdesktop) iniciado em background (PID: $!). Log: /tmp/rdp_0.log"
+  exit 0
+fi
+
+if [[ -z "$PAIR" ]]; then
   echo "Monitores detectados:"
   while read -r line; do
     id=$(echo "$line" | awk '{print $1}' | tr -d ':')
@@ -33,22 +54,20 @@ else
   fi
 fi
 
-nohup xfreerdp3 \
+nohup xfreerdp \
 /u:"$USER_RDP" \
 /p:"$PASS_RDP" \
 /v:"$HOST_RDP" \
 /cert:tofu \
-/multimon \
+/sec:rdp \
+/multimon:force \
 /monitors:"$PAIR" \
 /dynamic-resolution \
 /clipboard \
 /audio-mode:0 \
-/sound \
-/microphone \
+/sound:sys:pulse \
+/microphone:sys:pulse \
 -decorations \
 </dev/null >/tmp/rdp_0.log 2>&1 &
 
 echo "RDP iniciado em background (PID: $!). Log: /tmp/rdp_0.log"
-
-
-
