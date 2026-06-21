@@ -37,17 +37,60 @@ while ($listener.IsListening) {
         $ctx.Response.Close()
         continue
     }
-    $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-    $bmp = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
+
+    $path = $ctx.Request.Url.LocalPath
+
+    if ($path -eq '/monitors') {
+        $screens = [System.Windows.Forms.Screen]::AllScreens
+        $list = for ($i = 0; $i -lt $screens.Length; $i++) {
+            $s = $screens[$i]
+            [PSCustomObject]@{
+                index   = $i
+                name    = $s.DeviceName
+                x       = $s.Bounds.X
+                y       = $s.Bounds.Y
+                width   = $s.Bounds.Width
+                height  = $s.Bounds.Height
+                primary = $s.Primary
+            }
+        }
+        $json = [System.Text.Encoding]::UTF8.GetBytes(($list | ConvertTo-Json -Compress))
+        $ctx.Response.ContentType = 'application/json; charset=utf-8'
+        $ctx.Response.ContentLength64 = $json.Length
+        $ctx.Response.OutputStream.Write($json, 0, $json.Length)
+        $ctx.Response.Close()
+        continue
+    }
+
+    $monitorParam = $ctx.Request.QueryString["monitor"]
+    $screens = [System.Windows.Forms.Screen]::AllScreens
+    if ($monitorParam -match '^\d+$') {
+        $idx = [int]$monitorParam
+        if ($idx -ge $screens.Length) {
+            $err = [System.Text.Encoding]::UTF8.GetBytes("monitor index out of range")
+            $ctx.Response.StatusCode = 400
+            $ctx.Response.ContentLength64 = $err.Length
+            $ctx.Response.OutputStream.Write($err, 0, $err.Length)
+            $ctx.Response.Close()
+            continue
+        }
+        $bounds = $screens[$idx].Bounds
+    } else {
+        $bounds = [System.Windows.Forms.SystemInformation]::VirtualScreen
+    }
+
+    $bmp = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
     $g = [System.Drawing.Graphics]::FromImage($bmp)
-    $g.CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size)
+    $g.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
     $ms = New-Object System.IO.MemoryStream
     $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
     $bytes = $ms.ToArray()
+    $g.Dispose(); $bmp.Dispose()
     $ctx.Response.ContentType = 'image/png'
     $ctx.Response.ContentLength64 = $bytes.Length
     $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
     $ctx.Response.Close()
+    $ms.Dispose()
 }
 PSEOF
 sed -i "s/SCREENSHOT_TOKEN/$TOKEN/" "$SERVER_TMP"
