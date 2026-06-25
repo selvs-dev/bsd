@@ -63,6 +63,7 @@ echo "$PROFILE" > "$LAST_PROFILE_FILE"
 USER_RDP=$(conf_get "$PROFILE" SAVED_USER); USER_RDP="${USER_RDP:-${DEFAULT_USER[$PROFILE]}}"
 HOST_RDP=$(conf_get "$PROFILE" SAVED_HOST); HOST_RDP="${HOST_RDP:-${DEFAULT_HOST[$PROFILE]}}"
 SAVED_MONITORS=$(conf_get "$PROFILE" LAST_MONITORS)
+SAVED_PASS_ENC=$(conf_get "$PROFILE" SAVED_PASS)
 SEC_RDP="${DEFAULT_SEC[$PROFILE]}"
 CERT_RDP="${DEFAULT_CERT[$PROFILE]}"
 
@@ -105,10 +106,27 @@ else
   fi
 fi
 
+if [[ "$SEC_RDP" == "nla" ]]; then
+  if [[ -n "$SAVED_PASS_ENC" ]]; then
+    read -rsp "Senha ($USER_RDP @ $HOST_RDP) [Enter para usar salva]: " PASS_RDP
+    echo
+    if [[ -z "$PASS_RDP" ]]; then
+      PASS_RDP=$(echo "$SAVED_PASS_ENC" | base64 -d)
+    else
+      SAVED_PASS_ENC=$(echo -n "$PASS_RDP" | base64)
+    fi
+  else
+    read -rsp "Senha ($USER_RDP @ $HOST_RDP): " PASS_RDP
+    echo
+    SAVED_PASS_ENC=$(echo -n "$PASS_RDP" | base64)
+  fi
+fi
+
 cat > "$CONFIG_DIR/$PROFILE.conf" <<EOF
 SAVED_USER="$USER_RDP"
 SAVED_HOST="$HOST_RDP"
 LAST_MONITORS="$PAIR"
+SAVED_PASS="$SAVED_PASS_ENC"
 EOF
 
 XFREERDP_ARGS=(
@@ -116,6 +134,7 @@ XFREERDP_ARGS=(
   /v:"$HOST_RDP"
   /cert:"$CERT_RDP"
   /sec:"$SEC_RDP"
+  /kbd:layout:0x00000416,lang:0x0416
   /multimon:force
   /monitors:"$PAIR"
   /dynamic-resolution
@@ -138,8 +157,6 @@ if [[ "$PROFILE" == "remote" ]]; then
 fi
 
 if [[ "$SEC_RDP" == "nla" ]]; then
-  read -rsp "Senha ($USER_RDP @ $HOST_RDP): " PASS_RDP
-  echo
   XFREERDP_ARGS+=("/p:$PASS_RDP")
 fi
 
