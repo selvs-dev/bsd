@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SOURCE=$(wpctl status | grep "\*.*PCM2902" | grep -oP '\d+(?=\.)' | head -1)
+SOURCE=$(pw-metadata 0 2>/dev/null | grep 'default.audio.source' | grep -oP '(?<="name":")[^"]+' | head -1)
 SOURCE="${SOURCE:-@DEFAULT_AUDIO_SOURCE@}"
 
 FILE="/tmp/bsd-mic-test-loop.wav"
