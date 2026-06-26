@@ -39,5 +39,6 @@ if [[ $idx -lt 0 || $idx -ge ${#IDS[@]} ]]; then
   echo "Opção inválida."; exit 1
 fi
 
-wpctl set-default "${IDS[$idx]}"
+node_name=$(wpctl inspect "${IDS[$idx]}" 2>/dev/null | grep -oP '(?<=node\.name = ")[^"]+')
+pw-metadata 0 default.audio.source "{\"name\":\"$node_name\"}"
 echo "Fonte definida: ${NAMES[$idx]}"
