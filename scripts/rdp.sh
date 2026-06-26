@@ -107,14 +107,18 @@ else
 fi
 
 if [[ "$SEC_RDP" == "nla" ]]; then
-  if [[ -n "$SAVED_PASS_ENC" ]]; then
-    read -rsp "Senha ($USER_RDP @ $HOST_RDP) [Enter para usar salva]: " PASS_RDP
+  if $INTERACTIVE; then
+    prompt="Senha ($USER_RDP @ $HOST_RDP)"
+    [[ -n "$SAVED_PASS_ENC" ]] && prompt+=" [Enter para manter]"
+    read -rsp "$prompt: " PASS_RDP
     echo
-    if [[ -z "$PASS_RDP" ]]; then
+    if [[ -z "$PASS_RDP" && -n "$SAVED_PASS_ENC" ]]; then
       PASS_RDP=$(echo "$SAVED_PASS_ENC" | base64 -d)
     else
       SAVED_PASS_ENC=$(echo -n "$PASS_RDP" | base64)
     fi
+  elif [[ -n "$SAVED_PASS_ENC" ]]; then
+    PASS_RDP=$(echo "$SAVED_PASS_ENC" | base64 -d)
   else
     read -rsp "Senha ($USER_RDP @ $HOST_RDP): " PASS_RDP
     echo
@@ -128,6 +132,7 @@ SAVED_HOST="$HOST_RDP"
 LAST_MONITORS="$PAIR"
 SAVED_PASS="$SAVED_PASS_ENC"
 EOF
+chmod 600 "$CONFIG_DIR/$PROFILE.conf"
 
 XFREERDP_ARGS=(
   /u:"$USER_RDP"
