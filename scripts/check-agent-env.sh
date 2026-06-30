@@ -83,3 +83,30 @@ else
 fi
 
 echo ""
+
+# Claude whoami + usage (só se instalado)
+if command -v claude &>/dev/null; then
+    CLAUDE_STATUS=$(claude auth status 2>/dev/null)
+    if [ $? -eq 0 ] && [ -n "$CLAUDE_STATUS" ]; then
+        LOGGED_IN=$(echo "$CLAUDE_STATUS" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('loggedIn',''))" 2>/dev/null)
+        if [ "$LOGGED_IN" = "True" ]; then
+            EMAIL=$(echo "$CLAUDE_STATUS" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('email',''))" 2>/dev/null)
+            ORG=$(echo "$CLAUDE_STATUS" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('orgName',''))" 2>/dev/null)
+            PLAN=$(echo "$CLAUDE_STATUS" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('subscriptionType',''))" 2>/dev/null)
+            AUTH=$(echo "$CLAUDE_STATUS" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('authMethod',''))" 2>/dev/null)
+
+            echo "=== Claude Account ==="
+            echo ""
+            ok "Logged in as: ${EMAIL}"
+            ok "Org: ${ORG}"
+            ok "Plan: ${PLAN}"
+            ok "Auth method: ${AUTH}"
+        else
+            fail "Claude não autenticado" "claude auth login"
+        fi
+    else
+        fail "Claude auth status falhou" "claude auth login"
+    fi
+fi
+
+echo ""
