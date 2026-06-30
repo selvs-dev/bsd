@@ -101,6 +101,18 @@ if command -v claude &>/dev/null; then
             ok "Org: ${ORG}"
             ok "Plan: ${PLAN}"
             ok "Auth method: ${AUTH}"
+
+            echo ""
+            echo "=== Claude Usage ==="
+            echo ""
+            USAGE_OUTPUT=$(timeout 10 claude -p "/usage" 2>/dev/null)
+            if [ -n "$USAGE_OUTPUT" ]; then
+                while IFS= read -r line; do
+                    [ -n "$line" ] && ok "$line"
+                done <<< "$USAGE_OUTPUT"
+            else
+                fail "Não foi possível obter usage" "claude -p /usage"
+            fi
         else
             fail "Claude não autenticado" "claude auth login"
         fi
